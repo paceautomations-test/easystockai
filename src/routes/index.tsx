@@ -1,58 +1,66 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Minus, Plus, Shirt, Trash2 } from "lucide-react";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { RefreshCw, Shirt } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { adjustStock, removeProduct, useProducts } from "@/lib/store";
+import { fetchInventory } from "@/lib/shopify";
+
+const inventoryQuery = queryOptions({ queryKey: ["inventory"], queryFn: fetchInventory, refetchInterval: 30000, refetchOnWindowFocus: true });
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
     { title: "Inventory — EasyStock AI" },
-    { name: "description", content: "See and update your boutique stock in one tap." },
+    { name: "description", content: "Your live Shopify stock, at a glance." },
     { property: "og:title", content: "Inventory — EasyStock AI" },
-    { property: "og:description", content: "See and update your boutique stock in one tap." },
+    { property: "og:description", content: "Your live Shopify stock, at a glance." },
   ] }),
   component: Inventory,
 });
 
 function Inventory() {
-  const items = useProducts();
-  const total = items.reduce((n, p) => n + Object.values(p.sizes).reduce((a, b) => a + b, 0), 0);
+  const { data, isLoading, error, refetch, isFetching } = useQuery(inventoryQuery);
+  const items = data ?? [];
+  const units = items.reduce((n, p) => n + p.variants.reduce((a, v) => a + (v.quantityAvailable ?? 0), 0), 0);
+  const low = items.filter((p) => p.variants.some((v) => (v.quantityAvailable ?? 1) <= 0 || !v.availableForSale)).length;
+
   return (
-    <AppShell title="Your inventory">
-      <div className="mb-5 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-secondary p-4"><p className="text-xs text-muted-foreground">Products</p><p className="text-2xl font-bold text-primary">{items.length}</p></div>
-        <div className="rounded-2xl bg-secondary p-4"><p className="text-xs text-muted-foreground">Units in stock</p><p className="text-2xl font-bold text-primary">{total}</p></div>
+    <AppShell title="Inventory" subtitle="Synced with Shopify" right={
+      <button onClick={() => refetch()} aria-label="Refresh" className="rounded-full border bg-card p-2.5"><RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} /></button>
+    }>
+      <div className="mb-5 grid grid-cols-3 gap-2">
+        {[["Products", items.length], ["Units", units], ["Sold out", low]].map(([l, v]) => (
+          <div key={l} className="rounded-2xl border bg-card p-3"><p className="text-[11px] text-muted-foreground">{l}</p><p className="text-xl font-semibold">{v}</p></div>
+        ))}
       </div>
-      {items.length === 0 ? (
-        <div className="rounded-2xl border-2 border-dashed p-8 text-center">
-          <Shirt className="mx-auto mb-3 h-10 w-10 text-accent" />
-          <p className="font-semibold">No items yet</p>
-          <p className="mb-4 text-sm text-muted-foreground">Snap a photo and describe it to add your first item.</p>
-          <Link to="/add" className="inline-block rounded-full bg-accent px-6 py-3 font-semibold text-accent-foreground">Add item</Link>
+
+      {isLoading ? (
+        <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-card" />)}</div>
+      ) : error ? (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm">{(error as Error).message}</div>
+      ) : items.length === 0 ? (
+        <div className="rounded-3xl border border-dashed p-8 text-center">
+          <div className="bg-gradient-brand mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"><Shirt className="h-7 w-7 text-primary-foreground" /></div>
+          <p className="font-semibold">No products found</p>
+          <p className="mb-5 text-sm text-muted-foreground">Your Shopify store is empty. Add your first item to get started.</p>
+          <Link to="/add" className="bg-gradient-brand inline-block rounded-full px-6 py-3 font-semibold text-primary-foreground">Add item</Link>
         </div>
       ) : (
         <ul className="space-y-3">
           {items.map((p) => (
-            <li key={p.id} className="rounded-2xl border bg-card p-3 shadow-sm">
-              <div className="flex gap-3">
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
-                  {p.image ? <img src={p.image} alt={p.title} className="h-full w-full object-cover" /> : <Shirt className="m-auto mt-6 h-8 w-8 text-muted-foreground" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between">
-                    <p className="truncate font-semibold">{p.title}</p>
-                    <button aria-label="Delete" onClick={() => removeProduct(p.id)} className="text-muted-foreground"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                  <p className="font-bold text-accent">${p.price.toFixed(2)}</p>
-                </div>
+            <li key={p.id} className="flex gap-3 rounded-2xl border bg-card p-3">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary">
+                {p.image ? <img src={p.image} alt={p.title} className="h-full w-full object-cover" /> : <Shirt className="mx-auto mt-6 h-8 w-8 text-muted-foreground" />}
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {Object.entries(p.sizes).map(([s, q]) => (
-                  <div key={s} className={`flex items-center gap-2 rounded-full px-2 py-1 text-sm ${q === 0 ? "bg-destructive/10 text-destructive" : "bg-secondary"}`}>
-                    <button aria-label={`Sold one ${s}`} onClick={() => adjustStock(p.id, s, -1)} className="rounded-full bg-card p-1"><Minus className="h-3 w-3" /></button>
-                    <span className="font-medium">{s}: {q}</span>
-                    <button aria-label={`Add one ${s}`} onClick={() => adjustStock(p.id, s, 1)} className="rounded-full bg-card p-1"><Plus className="h-3 w-3" /></button>
-                  </div>
-                ))}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{p.title}</p>
+                <p className="text-sm text-gradient font-semibold">{p.currency} {Number(p.price).toFixed(2)}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {p.variants.map((v) => {
+                    const out = !v.availableForSale || v.quantityAvailable === 0;
+                    return <span key={v.id} className={`rounded-full px-2 py-0.5 text-[11px] ${out ? "bg-destructive/15 text-destructive" : "bg-secondary text-secondary-foreground"}`}>
+                      {v.title === "Default Title" ? "Stock" : v.title}: {v.quantityAvailable ?? (out ? 0 : "—")}
+                    </span>;
+                  })}
+                </div>
               </div>
             </li>
           ))}
