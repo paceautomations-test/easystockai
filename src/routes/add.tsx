@@ -46,7 +46,7 @@ function AddItem() {
     if (!Ctor) { alert("Voice notes aren't supported in this browser. Please type instead."); return; }
     if (listening) { rec.current?.stop(); return; }
     const r = new Ctor(); r.lang = "en-US";
-    r.onresult = (e) => setNote(Array.from(e.results).map((x) => x[0].transcript).join(" "));
+    r.onresult = (e) => setNote(Array.from(e.results).map((x) => x[0]?.transcript ?? "").join(" "));
     r.onend = () => setListening(false);
     rec.current = r; r.start(); setListening(true);
   };

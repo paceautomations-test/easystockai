@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-export type Product = { id: string; title: string; price: number; image?: string; sizes: Record<string, number>; createdAt: number };
+export type Product = { id: string; title: string; price: number; image?: string | undefined; sizes: Record<string, number>; createdAt: number };
 const KEY = "easystock-products";
 const listeners = new Set<() => void>();
 function read(): Product[] { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } }
@@ -22,13 +22,13 @@ export function parseNote(note: string) {
   const sizes: Record<string, number> = {};
   const range = note.match(/\b(XS|S|M|L|XL|XXL)\s*[-–to]+\s*(XS|S|M|L|XL|XXL)\b/i);
   if (range) {
-    const a = ORDER.indexOf(range[1].toUpperCase()), b = ORDER.indexOf(range[2].toUpperCase());
+    const a = ORDER.indexOf((range[1] ?? "").toUpperCase()), b = ORDER.indexOf((range[2] ?? "").toUpperCase());
     ORDER.slice(Math.min(a, b), Math.max(a, b) + 1).forEach((s) => (sizes[s] = qty));
   } else {
     (note.toUpperCase().match(/\b(XS|S|M|L|XL|XXL)\b/g) || []).forEach((s) => (sizes[s] = qty));
   }
   if (!Object.keys(sizes).length) sizes["One size"] = qty;
-  const first = note.split(",")[0].trim();
+  const first = (note.split(",")[0] ?? "").trim();
   const title = first ? first.replace(/\b\w/g, (c) => c.toUpperCase()) : "New item";
   return { title, price, sizes };
 }
