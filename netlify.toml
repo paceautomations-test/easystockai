@@ -1,0 +1,12 @@
+[build]
+  # Nitro auto-selects its Netlify preset when it detects Netlify,
+  # and writes the static site to dist/ and the SSR function to .netlify/
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 8 needs Node 20.19+ or 22.12+
+  NODE_VERSION = "22"
+  # The Shopify Storefront token in src/lib/shopify.ts is a public, client-side
+  # token by design. This stops Netlify's smart secret scanner from failing the build on it.
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "53b0d59950a63495911db6ea0dd9ef5b"
