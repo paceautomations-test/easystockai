@@ -1,6 +1,6 @@
 export const SHOP_DOMAIN = "easystock-dev-2wcte9hv.myshopify.com";
 const URL_ = `https://${SHOP_DOMAIN}/api/2026-10/graphql.json`;
-const TOKEN = "d042cb747a3abbc4ad64b0a8fd0738ef";
+const TOKEN = "ee1ebf7b23513badd8160579692fe3b6";
 
 export type Variant = { id: string; title: string; quantityAvailable: number | null; availableForSale: boolean };
 export type Product = { id: string; title: string; price: string; currency: string; image?: string | undefined; variants: Variant[] };
