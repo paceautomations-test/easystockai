@@ -1,7 +1,7 @@
 export const SHOP_DOMAIN = "easystock-dev-2wcte9hv.myshopify.com";
 const URL_ = `https://${SHOP_DOMAIN}/admin/api/2026-10/graphql.json`;
 // WARNING: Revoke this token in Shopify immediately and use process.env.SHOPIFY_TOKEN
-const TOKEN = "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";
+const TOKEN = import.meta.env.VITE_SHOPIFY_TOKEN;
 
 export type Variant = { id: string; title: string; inventoryQuantity: number; price: string };
 export type Product = { id: string; title: string; image?: string; variants: Variant[] };
